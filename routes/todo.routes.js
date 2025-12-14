@@ -30,16 +30,29 @@ router.post('/', async (req, res) => {
 });
 
 router.delete('/', async (req, res) => {
-    const {task} = req.body;
+    const {task, id} = req.body;
     
     try {
-        const data = await db.query("SELECT * FROM todo WHERE task = $1;", [task]);
+        let query, params;
+        
+        if (id) {
+            query = "SELECT * FROM todo WHERE id = $1;";
+            params = [id];
+        } else if (task) {
+            query = "SELECT * FROM todo WHERE task = $1;";
+            params = [task];
+        } else {
+            return res.status(400).json({message: "Please provide either 'id' or 'task'"});
+        }
+        
+        const data = await db.query(query, params);
 
         if(data.rows.length === 0) {
             return res.status(404).json({message: "there is no such task"});
         }
         
-        const result = await db.query("DELETE FROM todo WHERE task = $1;", [task]);
+        const deleteQuery = id ? "DELETE FROM todo WHERE id = $1;" : "DELETE FROM todo WHERE task = $1;";
+        const result = await db.query(deleteQuery, params);
         res.status(200).json({message: `${result.rowCount} row was deleted.`});
     }
     catch(error) {
